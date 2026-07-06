@@ -78,34 +78,42 @@ available_projects_preview = list(raw_df["Project Name"].unique()) if "Project N
 st.markdown(f"📊 **Currently Analyzing Total Volume across: {len(available_projects_preview)} Registered Projects**")
 
 # =========================================================================
-# 3. GLOBAL MATRIX COUNTING LOGIC (Dynamic Filter Aligned)
+# 3. GLOBAL MATRIX COUNTING LOGIC (With Safety Guardrails)
 # =========================================================================
 st.markdown("### Quota Performance Summary")
 
 def get_counts(row_type, row_val):
-    # ⭐ FIX: Point back to project_df so changing dropdown filters updates the matrix counts instantly!
     if project_df.empty:
         return 0, 0
     temp_df = project_df.copy()
     
     if row_type == "Device":
-        temp_df = temp_df[temp_df["Device"].astype(str).str.strip().str.lower() == str(row_val).strip().lower()]
-        
-    elif row_type == "City_Code":
-        if "City_Code" in temp_df.columns:
-            # Convert to string, strip spaces, and wipe out any Excel .0 trailing decimals safely
-            temp_df["City_Match_Clean"] = temp_df["City_Code"].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-            target_str = str(row_val).strip()
-            temp_df = temp_df[temp_df["City_Match_Clean"] == target_str]
+        if "Device" in temp_df.columns:
+            temp_df = temp_df[temp_df["Device"].astype(str).str.strip().str.lower() == str(row_val).strip().lower()]
         else:
             return 0, 0
         
+    elif row_type == "City_Code":
+        # ⭐ Safety Guardrail: Scan dynamically for 'City_Code' to bypass casing or spacing mismatches
+        target_col = [c for c in temp_df.columns if c.strip().lower() == "city_code"]
+        if target_col:
+            actual_col = target_col[0]
+            temp_df["City_Match_Clean"] = temp_df[actual_col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+            target_str = str(row_val).strip()
+            temp_df = temp_df[temp_df["City_Match_Clean"] == target_str]
+        else:
+            # Safely return 0 instead of crashing the site if column is missing from filter slice
+            return 0, 0
+        
     elif row_type == "Age-Gender":
-        gender, age_range = row_val.split(":")  
-        low_age, high_age = map(int, age_range.split("-"))
-        temp_df = temp_df[temp_df["Gender"].astype(str).str.strip().str.upper() == gender.upper()]
-        temp_df["Age_Clean"] = pd.to_numeric(temp_df["Age"], errors='coerce')
-        temp_df = temp_df[(temp_df["Age_Clean"] >= low_age) & (temp_df["Age_Clean"] <= high_age)]
+        if "Gender" in temp_df.columns and "Age" in temp_df.columns:
+            gender, age_range = row_val.split(":")  
+            low_age, high_age = map(int, age_range.split("-"))
+            temp_df = temp_df[temp_df["Gender"].astype(str).str.strip().str.upper() == gender.upper()]
+            temp_df["Age_Clean"] = pd.to_numeric(temp_df["Age"], errors='coerce')
+            temp_df = temp_df[(temp_df["Age_Clean"] >= low_age) & (temp_df["Age_Clean"] <= high_age)]
+        else:
+            return 0, 0
         
     elif row_type == "ISEC":
         low_isec, high_isec = map(int, row_val.split("-"))
@@ -132,7 +140,7 @@ def get_counts(row_type, row_val):
     return online_count, offline_count
 
 # =========================================================================
-# 4. FIXED LAYOUT STRUCTURE MATRIX (Cleaned: Unassigned Row Removed)
+# 4. FIXED LAYOUT STRUCTURE MATRIX
 # =========================================================================
 layout_definition = [
     ["Desktop", "Device", "Desktop", 400, 160, 240],

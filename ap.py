@@ -11,7 +11,7 @@ st.markdown("---")
 # =========================================================================
 # 1. CLOUD FILE CONFIGURATION (Direct Cloud Sync)
 # =========================================================================
-FILE_ID = "1jGrpT9e0utjvIUHS-CzZ441ml8YUpx1A" 
+FILE_ID = "1cpx1biOPUCu3KxF10DSBEG0_nzUJGg8u" 
 GOOGLE_DRIVE_URL = f"https://drive.google.com/uc?id={FILE_ID}&export=download"
 
 @st.cache_data(ttl=600)  
